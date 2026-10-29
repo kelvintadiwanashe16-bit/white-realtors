@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>White Realtors - Admin Panel</title>
+<link rel="icon" href="logo.jpg">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Arial;background:#f0f2f5;margin:0;padding:12px;}
+.login{max-width:400px;margin:80px auto;background:white;padding:25px;border-radius:12px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
+.card{background:white;padding:18px;border-radius:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+input,select,textarea{width:100%;padding:10px;margin:6px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;}
+.btn{width:100%;padding:12px;background:#001f4d;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:8px;}
+.btn-green{background:#25D366;} .btn-blue{background:#0084ff;} .btn-orange{background:#ff6b00;} .btn-red{background:#e74c3c;} .btn-gray{background:#e4e6eb;color:#000;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;} @media(max-width:600px){.grid{grid-template-columns:1fr;}}
+.prop-item{display:flex;gap:8px;border:1px solid #eee;padding:10px;border-radius:8px;margin:8px 0;align-items:center;}
+.prop-item img{width:65px;height:55px;object-fit:cover;border-radius:6px;}
+.action-btns{display:flex;flex-direction:column;gap:4px;}
+.action-btns button{padding:6px 14px;border:none;border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer;}
+.sync-box{background:#e8f5e9;border:2px dashed #25D366;padding:15px;border-radius:12px;text-align:center;margin:15px 0;}
+.editing{background:#fff3cd!important;border:2px solid #ff6b00!important;}
+</style>
+</head>
+<body>
+
+<div id="loginBox" class="login">
+<h2>White Realtors Admin</h2>
+<p>Only Mr Tadiwanashe</p>
+<input type="password" id="pass" placeholder="Password">
+<button class="btn" onclick="login()">Login</button>
+</div>
+
+<div id="adminBox" style="display:none;max-width:900px;margin:0 auto;">
+<h2>White Realtors - Admin Panel</h2>
+
+<div class="sync-box">
+<h3 style="margin:0;color:#25D366;">🔄 SYNC VIA WHATSAPP</h3>
+<p style="font-size:12px;">Export file → Send via WhatsApp to other device → Import there</p>
+<button class="btn btn-green" onclick="exportData()">📤 EXPORT - Save File & Send via WhatsApp</button>
+<div style="margin:10px 0;">
+<input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+<button class="btn btn-blue" onclick="document.getElementById('importFile').click()">📥 IMPORT - Load File from WhatsApp</button>
+</div>
+<p id="syncStatus" style="font-size:12px;color:#666;">0 properties</p>
+</div>
+
+<div class="card" id="formCard">
+<h3 id="formTitle">Add New Property</h3>
+<div class="grid">
+<div>
+<label>Area (For Search)</label>
+<select id="area">
+<option value="zengeza 4">Zengeza 4</option>
+<option value="zengeza 3">Zengeza 3</option>
+<option value="zengeza 5">Zengeza 5</option>
+<option value="zengeza 2">Zengeza 2</option>
+<option value="zengeza 1">Zengeza 1</option>
+<option value="st marys">St Marys</option>
+<option value="manyame">Manyame Park</option>
+<option value="seke">Seke</option>
+<option value="ziko">Ziko</option>
+<option value="tilco">Tilco</option>
+</select>
+<label>Price USD</label><input type="number" id="price" placeholder="25000">
+<label>Title</label><input type="text" id="title" placeholder="3 bedroom Zengeza 4">
+</div>
+<div>
+<label>Location Full</label><input type="text" id="location" placeholder="Zengeza 4, Chitungwiza">
+<label>Description</label><textarea id="desc" placeholder="3 beds, kitchen, dining, well fenced"></textarea>
+</div>
+</div>
+<label>Photos (Up to 5) - If editing price only, leave empty, old photos stay</label><input type="file" id="images" accept="image/*" multiple>
+<div id="preview" style="display:flex;gap:5px;margin:10px 0;flex-wrap:wrap;"></div>
+<button class="btn btn-green" id="mainBtn" onclick="addProperty()">+ Add Property</button>
+<button class="btn btn-gray" id="cancelBtn" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
+</div>
+
+<div class="card">
+<h3>Manage - Edit Price or Delete (<span id="count">0</span>)</h3>
+<div id="list"></div>
+<div style="margin-top:15px;text-align:center;">
+<a href="properties.html" target="_blank" style="color:#001f4d;font-weight:bold;">👁️ View Client Website (properties.html)</a>
+</div>
+</div>
+</div>
+
+<script>
+let props=JSON.parse(localStorage.getItem('whiteProps')||'[]');
+let tempImages=[];let editingId=null;
+function login(){if(document.getElementById('pass').value==='0781688870'||document.getElementById('pass').value==='0781'||document.getElementById('pass').value==='white'){document.getElementById('loginBox').style.display='none';document.getElementById('adminBox').style.display='block';render();}else{alert('Wrong password');}}
+document.getElementById('images').addEventListener('change',function(e){tempImages=[];document.getElementById('preview').innerHTML='';for(let file of e.target.files){let r=new FileReader();r.onload=function(ev){tempImages.push(ev.target.result);document.getElementById('preview').innerHTML+='<img src="'+ev.target.result+'" style="width:70px;height:60px;object-fit:cover;border-radius:6px;">';};r.readAsDataURL(file);}});
+function addProperty(){
+ let area=document.getElementById('area').value,price=document.getElementById('price').value,title=document.getElementById('title').value,loc=document.getElementById('location').value,desc=document.getElementById('desc').value;
+ if(!price||!title){alert('Fill price and title');return;}
+ if(editingId!==null){
+  let idx=props.findIndex(p=>p.id===editingId);
+  if(idx>-1){props[idx].area=area;props[idx].price=price;props[idx].title=title;props[idx].location=loc;props[idx].desc=desc;if(tempImages.length>0)props[idx].images=tempImages;localStorage.setItem('whiteProps',JSON.stringify(props));alert('Price updated! $'+price+' - Now EXPORT to sync');cancelEdit();render();return;}
+ }
+ if(tempImages.length==0){alert('Select photos');return;}
+ props.unshift({id:Date.now(),area:area,price:price,title:title,location:loc,desc:desc,images:tempImages});
+ localStorage.setItem('whiteProps',JSON.stringify(props));tempImages=[];document.getElementById('preview').innerHTML='';document.getElementById('images').value='';document.getElementById('price').value='';document.getElementById('title').value='';document.getElementById('desc').value='';render();alert('Added! Click EXPORT');
+}
+function editProp(id){
+ let p=props.find(x=>x.id===id);if(!p)return;editingId=id;
+ document.getElementById('area').value=p.area;document.getElementById('price').value=p.price;document.getElementById('title').value=p.title;document.getElementById('location').value=p.location;document.getElementById('desc').value=p.desc;
+ document.getElementById('preview').innerHTML=p.images.map(img=>'<img src="'+img+'" style="width:70px;height:60px;object-fit:cover;border-radius:6px;border:2px solid orange;">').join('')+'<p style="font-size:11px;width:100%;">Old photos stay if you don\'t select new ones</p>';
+ document.getElementById('formTitle').innerText='✏️ Editing: '+p.title;document.getElementById('mainBtn').innerText='✅ Update Property';document.getElementById('mainBtn').style.background='#ff6b00';document.getElementById('cancelBtn').style.display='block';document.getElementById('formCard').classList.add('editing');window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEdit(){editingId=null;tempImages=[];document.getElementById('preview').innerHTML='';document.getElementById('images').value='';document.getElementById('price').value='';document.getElementById('title').value='';document.getElementById('location').value='';document.getElementById('desc').value='';document.getElementById('formTitle').innerText='Add New Property';document.getElementById('mainBtn').innerText='+ Add Property';document.getElementById('mainBtn').style.background='#25D366';document.getElementById('cancelBtn').style.display='none';document.getElementById('formCard').classList.remove('editing');}
+function deleteProp(id){if(confirm('Delete? After delete EXPORT again')){props=props.filter(p=>p.id!==id);localStorage.setItem('whiteProps',JSON.stringify(props));if(editingId===id)cancelEdit();render();}}
+function render(){document.getElementById('count').innerText=props.length;document.getElementById('syncStatus').innerText=props.length+' properties ready';let html='';props.forEach(p=>{html+='<div class="prop-item"><img src="'+p.images[0]+'"><div style="flex:1;"><b>$'+p.price+'</b> - '+p.title+'<br><small>'+p.location+' | '+p.area+'</small></div><div class="action-btns"><button style="background:#ff6b00;color:white;" onclick="editProp('+p.id+')">✏️ Edit</button><button style="background:#e74c3c;color:white;" onclick="deleteProp('+p.id+')">🗑️ Delete</button></div></div>';});document.getElementById('list').innerHTML=html||'<p>No properties yet</p>';}
+function exportData(){if(props.length==0){alert('No properties');return;}let blob=new Blob([JSON.stringify(props)],{type:'application/json'});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download='white-realtors-data.json';a.click();setTimeout(()=>{window.open('https://wa.me/?text='+encodeURIComponent('White Realtors data - '+props.length+' properties'),' _blank');alert('File downloaded! Send white-realtors-data.json via WhatsApp to other device, then IMPORT');},500);}
+function importData(event){let file=event.target.files[0];if(!file)return;let reader=new FileReader();reader.onload=function(e){try{let imported=JSON.parse(e.target.result);if(Array.isArray(imported)){if(confirm('Import '+imported.length+'? Will MERGE')){let mergedMap={};props.forEach(p=>mergedMap[p.id]=p);imported.forEach(p=>mergedMap[p.id]=p);props=Object.values(mergedMap).sort((a,b)=>b.id-a.id);localStorage.setItem('whiteProps',JSON.stringify(props));render();alert('Imported! Total: '+props.length);}}}catch(err){alert('Error: '+err);}};reader.readAsText(file);}
+</script>
+</body>
+</html>
